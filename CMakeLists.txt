@@ -1,8 +1,17 @@
-get_filename_component(EXERCISENAME ${CMAKE_CURRENT_LIST_DIR} NAME)
-file(GLOB_RECURSE SOURCES "*.cpp")
-file(GLOB_RECURSE HEADERS "*.h")
-add_executable(${EXERCISENAME} ${SOURCES} ${HEADERS})
-if(WIN32)
-        target_link_libraries(${EXERCISENAME} "legacy_stdio_definitions.lib")
-endif()
-target_link_libraries(${EXERCISENAME} ${COMMON_LIBS})
+cmake_minimum_required(VERSION 2.8)
+project(alrm_graphics)
+
+#--- Load the common ICG configuration
+include(common/config.cmake)
+include(common/Eigen.cmake)
+include(common/OpenGP.cmake)
+
+#--- OpenGL configuration
+include(common/OpenGL.cmake)
+include(common/GLEW.cmake)
+include(common/GLFW.cmake)
+
+#--- Subprojects
+#add_subdirectory(raytrace)
+#add_subdirectory(rasterize)
+add_subdirectory(assign01)

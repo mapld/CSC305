@@ -1,6 +1,7 @@
 #include "OpenGP/Image/Image.h"
 #include "OpenGP/GL/Eigen.h"
 #include "bmpwrite.h"
+#include <iostream>
 
 using namespace OpenGP;
 using Colour = Vec3;
@@ -52,7 +53,7 @@ void rasterize(Triangle t, Image<Colour> &image, Image<float> &depth) {
             float beta = triangleArea(s1,pt,s3) / totalArea;
             float gamma = triangleArea(s1,s2,pt) / totalArea;
 
-            float z = alpha*s1(2) + beta*s2(2) + gamma*s3(2);
+            float z = alpha*t.v1(2) + beta*t.v2(2) + gamma*t.v3(2);
 
             if (alpha>=0.0f && alpha<=1.0f && beta>=0.0f && beta<=1.0f && gamma>=0.0f &&gamma<=1.0f
                     && depth(j,i) > z) {
@@ -61,11 +62,26 @@ void rasterize(Triangle t, Image<Colour> &image, Image<float> &depth) {
                 //Vec3 normal = t.n1 + t.n2 + t.n3;
                 Vec3 normal = alpha*t.n1 + beta*t.n2 + gamma*t.n3;
                 normal = normal.normalized();
-              
+
+                Vec3 hit = Vec3(alpha*t.v1(0) + beta*t.v2(0) + gamma*t.v3(0),
+                            alpha*t.v1(1) + beta*t.v2(1) + gamma*t.v3(1),
+                            alpha*t.v1(2) + beta*t.v2(2) + gamma*t.v3(2));
+
+
+                Vec3 lightPos = Vec3(10,10,10);
+                Vec3 lightDirection = (lightPos - hit);
+                lightDirection.normalize();
+
+                float ambientFactor = 0.2f;
+                float diffuseFactor = 0.5f;
+
+                float scaleFactor = fmax(0, normal.dot(lightDirection))*diffuseFactor + ambientFactor;
+                Vec3 c = Vec3(1.0f,1.0f,1.0) * scaleFactor;
 
                 /// Visualize normals / regular shading option
-                image(j, i) = 0.5f*(Colour(normal(0),normal(1),normal(2))+Colour(1.0f, 1.0f, 1.0f));
+                // image(j, i) = 0.5f*(Colour(normal(0),normal(1),normal(2))+Colour(1.0f, 1.0f, 1.0f));
                 // image(j, i) = shadeFragment(normal);
+                image(j, i) = c;
 
                 // Set depth of fragment
                 depth(j, i) = z;
@@ -112,7 +128,8 @@ int main(int, char**){
     //Mat4x4 projection = OpenGP::ortho(-1.5f*(float)wResolution/(float)hResolution, 1.5f*(float)wResolution/(float)hResolution, -1.5f, 1.5f, -1.5f, 1.5f);
 
     /// Try varying camera parameters
-    Vec3 eye = Vec3(-0.2f,0.4f,1);
+    // Vec3 eye = Vec3(-0.2f,0.4f,1);
+    Vec3 eye = Vec3(0,0,1);
     Vec3 focus = Vec3(0,0,0);
     Vec3 up = Vec3(0,1,0);
     Mat4x4 view = OpenGP::lookAt(eye, focus, up);

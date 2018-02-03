@@ -20,14 +20,6 @@ struct Camera{
   Vec3 up = Vec3(0,1,0);
 };
 
-struct World{
-  int wResolution;
-  int hResolution;
-
-  float fieldOfView = 80.0f; // degrees
-  Camera camera;
-};
-
 struct Sphere{
   Vec3 position;
   float radius;
@@ -48,10 +40,21 @@ struct Plane{
   float phongExponent = 100.0f;
 };
 
+struct World{
+  int wResolution;
+  int hResolution;
+
+  float fieldOfView = 80.0f; // degrees
+  Camera camera;
+
+  std::vector<Sphere> spheres;
+  std::vector<Plane> planes;
+};
+
 Vec3 mat4MultVec3(Mat4x4 mat, Vec3 vec){
    Vec4 ssv = mat * Vec4(vec(0),vec(1),vec(2),1);
    Vec3 result = Vec3(ssv(0)/ssv(3),ssv(1)/ssv(3),ssv(2)/ssv(3));
-   std::cout << result(0) << ", " << result(1) << ", " << result(2) << "\n";
+   // std::cout << result(0) << ", " << result(1) << ", " << result(2) << "\n";
    return result;
 }
 
@@ -59,7 +62,39 @@ void printVec3(Vec3 vec){
   std::cout << vec(0) << ", " << vec(1) << ", " << vec(2) << "\n";
 }
 
-void drawPlane(World world, Image<Colour>& image, Image<float> &depth, Plane plane,std::vector<Vec3> lights){
+float rayHitsSphere(Vec3 origin, Vec3 direction, Sphere sphere){
+  Vec3 spherePos = sphere.position;
+  float radius = sphere.radius;
+
+  Vec3 c = spherePos; // center of sphere
+  Scalar r = radius;  // radius of sphere
+
+  Scalar c1 = ((direction.dot(origin-c)));
+  Scalar c2 = ((origin-c).norm());
+  Scalar c3 = (r);
+  // part of the t calculation under the square root
+  Scalar descriminant = c1*c1 - c2*c2 + c3*c3;
+  if(descriminant < 0){
+    return descriminant;
+  } else {
+    Scalar t = -(direction.dot(origin-c)) - sqrt(descriminant); // time of the first hit
+    return t;
+  }
+}
+
+bool underShadow(World& world, Vec3 origin, Vec3 rayDirection){
+  for(int i = 0; i < world.spheres.size(); i++){
+    Sphere sphere = world.spheres[i];
+    float t = rayHitsSphere(origin, rayDirection, sphere);
+    float thresh = 0.01f;
+    if(t > thresh){
+      return true;
+    }
+  }
+  return false;
+}
+
+void drawPlane(World& world, Image<Colour>& image, Image<float> &depth, Plane plane,std::vector<Vec3> lights){
   float aspectRatio = (float)world.wResolution / (float)world.hResolution;
 
   Camera camera = world.camera;
@@ -86,12 +121,12 @@ void drawPlane(World world, Image<Colour>& image, Image<float> &depth, Plane pla
         Vec3 p = (plane.point - cameraOrigin);
         float t = p.dot(plane.normal) / denominator;
         if(t >= 0){
-          Vec3 hit = t * rayDirection;
+          Vec3 hit = cameraOrigin + (t * rayDirection);
 
           float z = t; //(hit(2)-cameraOrigin(2));// / rayDirection(2);
           if(z > depth(row,col)){
-            std::cout << "z: " << z << "\n";
-            std::cout << "depth: " << depth(row,col) << "\n";
+            // std::cout << "z: " << z << "\n";
+            // std::cout << "depth: " << depth(row,col) << "\n";
             continue;
           }
           depth(row,col) = z;
@@ -113,9 +148,20 @@ void drawPlane(World world, Image<Colour>& image, Image<float> &depth, Plane pla
           Vec3 half = lightDirection + v;
           half.normalize();
 
-          float scaleFactor = fmax(0,plane.normal.dot(lightDirection))*diffuseFactor // diffuse lighting
-            + fmax(0, pow(plane.normal.dot(half), phongExponent))*specularFactor // specular lighting
-            + ambientFactor;
+
+          float scaleFactor = ambientFactor;
+          if(!underShadow(world, hit, lightDirection)){
+            scaleFactor += fmax(0,plane.normal.dot(lightDirection))*diffuseFactor // diffuse lighting
+              + fmax(0, pow(plane.normal.dot(half), phongExponent))*specularFactor; // specular lighting
+          }
+          else{
+            std::cout << "lightDirection:";
+            printVec3(lightDirection);
+            std::cout << "hit:";
+            printVec3(hit);
+            std::cout << "lightPos:";
+            printVec3(lightPos);
+          }
           Color diffusedColor = white()*scaleFactor;
           image(row,col) = diffusedColor;
         }
@@ -151,42 +197,28 @@ void drawSpheres(World world, Image<Colour>& image, Image<float> &depth, std::ve
 
           for(int sph = 0; sph < spheres.size(); ++sph){
             Sphere sphere = spheres[sph];
-            Vec3 spherePos = sphere.position;
-            float radius = sphere.radius;
-
-            Vec3 c = spherePos; // center of sphere
-            Scalar r = radius;  // radius of sphere
-
-            Scalar c1 = ((l.dot(o-c)));
-            Scalar c2 = ((o-c).norm());
-            Scalar c3 = (r);
-            // part of the t calculation under the square root
-            Scalar descriminant = c1*c1 - c2*c2 + c3*c3;
-
-            // if the descriminant is above 0, the ray l hits the sphere
-            if(descriminant < 0){
-              //image(row,col) = white();
-            } else {
+                        // if the descriminant is above 0, the ray l hits the sphere
+            float t = rayHitsSphere(o,l,sphere);
+            if(t > 0){
               float diffuseFactor = sphere.diffuseFactor;
               float ambientFactor = sphere.ambientFactor;
               float specularFactor = sphere.specularFactor;
               float phongExponent = sphere.phongExponent;
 
-              Scalar t = -(l.dot(o-c)) - sqrt(descriminant); // time of the first hit
               Vec3 hit = o+(t*l); // location of the first hit
 
               float z = t;//(hit(2)-cameraOrigin(2));// / l(2);
               if(z > depth(row,col)){
                 continue;
               }
-              std::cout << "row: " << row << "\n";
-              std::cout << "col: " << col << "\n";
-              std::cout << "z: " << z << "\n";
-              std::cout << "depth: " << depth(row,col) << "\n";
+              // std::cout << "row: " << row << "\n";
+              // std::cout << "col: " << col << "\n";
+              // std::cout << "z: " << z << "\n";
+              // std::cout << "depth: " << depth(row,col) << "\n";
               depth(row,col) = z;
 
               // Unit normal of surface (normalized vector):
-              Vec3 normal = (hit-c)/radius;
+              Vec3 normal = (hit-sphere.position)/sphere.radius;
 
               Vec3 lightPos = lights[0];
 
@@ -231,21 +263,20 @@ int main(int, char**){
     sphere2.position = Vec3(0, 0, 5);
     sphere2.radius = 1.0f;
 
-    std::vector<Sphere> spheres;
-    spheres.push_back(sphere);
-    spheres.push_back(sphere2);
+    world.spheres.push_back(sphere);
+    world.spheres.push_back(sphere2);
 
     Plane plane;
-    plane.point = Vec3(0,-4.5f,0);
+    plane.point = Vec3(0,-3.5f,0);
     plane.normal = Vec3(0,1,0);
     // plane.point = Vec3(-100,0,0);
     // plane.normal = Vec3(1,0,0);
 
     // Single light source for now
-    std::vector<Vec3> lights = {Vec3(0.0f,3.0f,2)};
+    std::vector<Vec3> lights = {Vec3(0.0f,15.0f,5)};
 
     drawPlane(world, image, depth, plane, lights);
-    drawSpheres(world, image, depth, lights, spheres);
+    drawSpheres(world, image, depth, lights, world.spheres);
 
     bmpwrite("../../out.bmp", image);
     imshow(image);

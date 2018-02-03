@@ -1,8 +1,8 @@
--ID:/dev/icg/external/OpenGP/src
--ID:/dev/icg/external/eigen/include
--ID:/dev/icg/external/glew/include
--ID:/dev/icg/external/glfw/include
--ID:/dev/icg/common
+-IC:/Users/Alrehn/dev/CSC305/external/OpenGP/src
+-IC:/Users/Alrehn/dev/CSC305/external/eigen/include
+-IC:/Users/Alrehn/dev/CSC305/external/glew/include
+-IC:/Users/Alrehn/dev/CSC305/external/glfw/include
+-IC:/Users/Alrehn/dev/CSC305/common
 -IC:/mingw64/lib/gcc/../../x86_64-w64-mingw32/include/c++
 -IC:/mingw64/lib/gcc/../../x86_64-w64-mingw32/include/c++/x86_64-w64-mingw32
 -IC:/mingw64/lib/gcc/../../x86_64-w64-mingw32/include/c++/backward

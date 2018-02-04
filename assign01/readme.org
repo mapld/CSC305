@@ -1,0 +1,3 @@
+* CSC305 Assignment 1: Raytracing
+This is a raytracer which draws a boxed scene with walls and a ceiling. The scene contains spheres and a .obj mesh. It implements the phong lighting model and shadows.
+

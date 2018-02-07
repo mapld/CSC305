@@ -1,0 +1,3 @@
+/Users/alrm/dev/CSC305/build/CMakeFiles/update_opengp.dir
+/Users/alrm/dev/CSC305/build/assign01/CMakeFiles/assign01.dir
+/Users/alrm/dev/CSC305/build/CMakeFiles/common_headers.dir

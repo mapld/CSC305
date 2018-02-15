@@ -25,7 +25,6 @@ int main(int, char**){
     world.wResolution = 640;
     world.hResolution = 480;
 
-
     Image<Colour> image(world.hResolution, world.wResolution);
     Image<float> depth(world.hResolution, world.wResolution);
 

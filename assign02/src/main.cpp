@@ -132,8 +132,8 @@ int createScene(){
     }
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, pixels);
 
-    Model model = createCubeModel();
-    // Model model = loadModelFromObj("cube.obj");
+    // Model model = createCubeModel();
+    Model model = loadModelFromObj("cube.obj");
 
     // writeModelToObj(model, "cube.obj");
 

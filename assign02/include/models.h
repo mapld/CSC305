@@ -37,6 +37,10 @@ Model loadModelFromObj(char* filename){
   Model model;
 
   std::ifstream obj_file(filename);
+  if(!obj_file.is_open()){
+    std::cout << "ERROR: failed to read from file " << filename << "\n";
+    return model;
+  }
   std::string line;
   while(std::getline(obj_file,line)){
     std::istringstream iss(line);
@@ -71,6 +75,9 @@ Model loadModelFromObj(char* filename){
       iss >> z;
       iss >> c;
       iss >> cZ;
+      x -= 1;
+      y -= 1;
+      z -= 1;
       model.triangleIndicies.push_back(glm::vec3(x,y,z));
     }
 

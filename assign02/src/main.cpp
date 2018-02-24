@@ -4,10 +4,21 @@
 #include <GL/gl3w.h> // opengl wrapper
 #include <SDL.h>
 #include "gl_error_printing.h"
+#include "models.h"
+#include "textures.h"
+#include <glm/common.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
+#include <vector>
+
+int SCREEN_HEIGHT= 720;
+int SCREEN_WIDTH=  1280;
 
 // global variables for now
 GLuint gProgramID = 0;
 GLint gVertAttrib = -1;
+GLuint matrixID;
 GLint texAttrib = -1;
 GLuint gVBO = 0;
 GLuint gIBO = 0;
@@ -15,17 +26,23 @@ GLuint gVAO = 0;
 GLuint tex;
 
 int createScene(){
-  glGenVertexArrays(1, &gVAO);
+    glGenVertexArrays(1, &gVAO);
     glBindVertexArray(gVAO);
 
+
     gProgramID = glCreateProgram();
+
     GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
     const GLchar* vertexShaderSource[] = {
       "#version 140\n"
       "in vec3 LVertexPos3D;"
       "in vec2 TexCoord;"
       "out vec2 texcoord;"
-      "void main() { gl_Position = vec4( LVertexPos3D.x, LVertexPos3D.y, LVertexPos3D.z, 1 ); texcoord=TexCoord; }"
+      "uniform mat4 MVP;"
+      "void main() {"
+      "gl_Position = MVP * vec4( LVertexPos3D.x, LVertexPos3D.y, LVertexPos3D.z, 1 );"
+      "texcoord=TexCoord;"
+      "}"
     };
     glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
     glCompileShader(vertexShader);
@@ -36,6 +53,7 @@ int createScene(){
         printf( "Unable to compile vertex shader %d!\n", vertexShader );
         return -1;
     }
+
 
     glAttachShader(gProgramID, vertexShader);
 
@@ -114,36 +132,65 @@ int createScene(){
     }
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, pixels);
 
-      //VBO data
-    GLfloat vertexData[] =
-      {
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
-        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-        0.5f, 0.5f, 0.0f, 1.0f, 1.0f,
-        0.5f,  -0.5f, 0.0f, 1.0f, 0.0f
-      };
+    Model model = createCubeModel();
+    // Model model = loadModelFromObj("cube.obj");
 
-      //IBO data
-    GLuint indexData[] = { 0, 1, 2,
-                           0, 2, 3 };
+    // writeModelToObj(model, "cube.obj");
 
-    // glClearColor( 0.f, 0.f, 0.f, 1.f );
+    GLfloat* vertexData = new GLfloat[model.vertices.size()*5];
+    for(int i = 0; i < model.vertices.size(); i++){
+      int OFFSET = 5;
+      int loc = i*OFFSET;
+      vertexData[loc] = model.vertices[i].x;
+      vertexData[loc+1] = model.vertices[i].y;
+      vertexData[loc+2] = model.vertices[i].z;
+      vertexData[loc+3] = model.uvCoords[i].x;
+      vertexData[loc+4] = model.uvCoords[i].y;
+    }
+
+
+     //IBO data
+    GLint* indexData = new GLint[model.triangleIndicies.size()*3];
+    for(int i = 0; i < model.triangleIndicies.size(); i++){
+      int loc = i * 3;
+      indexData[loc] = model.triangleIndicies[i].x;
+      indexData[loc+1] = model.triangleIndicies[i].y;
+      indexData[loc+2] = model.triangleIndicies[i].z;
+    }
 
       //Create VBO
     glGenBuffers(1, &gVBO);
     glBindBuffer(GL_ARRAY_BUFFER, gVBO);
-    glBufferData(GL_ARRAY_BUFFER, 4 * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 8 * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
 
       //Create IBO
     glGenBuffers(1, &gIBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLuint), indexData, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 36 * sizeof(GLuint), indexData, GL_STATIC_DRAW);
+
+    matrixID = glGetUniformLocation(gProgramID, "MVP");
 
     return 0;
 }
 
 void renderScene(){
   glUseProgram(gProgramID);
+
+  // mvp 
+  glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+
+  glm::mat4 view = glm::lookAt(
+                               glm::vec3(4,-3,4), // Camera is at (4,3,3), in World Space
+                               glm::vec3(0,0,0), // looks at the origin
+                               glm::vec3(0,1,0)
+                               );
+
+  glm::mat4 model = glm::mat4(1.0f);
+
+  glm::mat4 mvp = projection * view * model;
+
+
+  glUniformMatrix4fv(matrixID, 1, GL_FALSE, &mvp[0][0]);
 
   //Enable vertex position
   glEnableVertexAttribArray( gVertAttrib );
@@ -158,7 +205,7 @@ void renderScene(){
 
   //Set index data and render
   glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, gIBO );
-  glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL );
+  glDrawElements( GL_TRIANGLES, 36, GL_UNSIGNED_INT, NULL );
 
   //Disable vertex position
   glDisableVertexAttribArray( gVertAttrib );
@@ -181,12 +228,16 @@ int main(int, char**){
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
+
   SDL_DisplayMode current;
   SDL_GetCurrentDisplayMode(0, &current);
-  SDL_Window *window = SDL_CreateWindow("CSC305 Assignment 2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+  SDL_Window *window = SDL_CreateWindow("CSC305 Assignment 2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
   SDL_GLContext gl_context = SDL_GL_CreateContext(window);
   SDL_GL_SetSwapInterval(1); // Enable vsync
   gl3wInit();
+
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
 
   // ImGui binding
   ImGui::CreateContext();
@@ -225,7 +276,7 @@ int main(int, char**){
 
     // Rendering
     glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     renderScene();
 

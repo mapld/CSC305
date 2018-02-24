@@ -7,16 +7,16 @@
 
 // global variables for now
 GLuint gProgramID = 0;
-GLint gVertexPos3DLocation = -1;
+GLint gVertAttrib = -1;
 GLint texAttrib = -1;
 GLuint gVBO = 0;
 GLuint gIBO = 0;
-GLuint vaoId = 0;
+GLuint gVAO = 0;
 GLuint tex;
 
 int createScene(){
-  glGenVertexArrays(1, &vaoId);
-    glBindVertexArray(vaoId);
+  glGenVertexArrays(1, &gVAO);
+    glBindVertexArray(gVAO);
 
     gProgramID = glCreateProgram();
     GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
@@ -70,8 +70,8 @@ int createScene(){
       return -1;
     }
 
-    gVertexPos3DLocation = glGetAttribLocation(gProgramID, "LVertexPos3D");
-    if(gVertexPos3DLocation == -1){
+    gVertAttrib = glGetAttribLocation(gProgramID, "LVertexPos3D");
+    if(gVertAttrib == -1){
       printf( "LVertexPos3D is not a valid glsl program variable!\n" );
       return -1;
     }
@@ -130,14 +130,14 @@ int createScene(){
     // glClearColor( 0.f, 0.f, 0.f, 1.f );
 
       //Create VBO
-    glGenBuffers( 1, &gVBO );
-    glBindBuffer( GL_ARRAY_BUFFER, gVBO );
-    glBufferData( GL_ARRAY_BUFFER, 4 * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW );
+    glGenBuffers(1, &gVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, gVBO);
+    glBufferData(GL_ARRAY_BUFFER, 4 * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
 
       //Create IBO
-    glGenBuffers( 1, &gIBO );
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, gIBO );
-    glBufferData( GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLuint), indexData, GL_STATIC_DRAW );
+    glGenBuffers(1, &gIBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLuint), indexData, GL_STATIC_DRAW);
 
     return 0;
 }
@@ -146,11 +146,11 @@ void renderScene(){
   glUseProgram(gProgramID);
 
   //Enable vertex position
-  glEnableVertexAttribArray( gVertexPos3DLocation );
+  glEnableVertexAttribArray( gVertAttrib );
 
   //Set vertex data
   glBindBuffer( GL_ARRAY_BUFFER, gVBO );
-  glVertexAttribPointer( gVertexPos3DLocation, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
+  glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
 
   // texture coords
   glEnableVertexAttribArray( texAttrib);
@@ -161,7 +161,7 @@ void renderScene(){
   glDrawElements( GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL );
 
   //Disable vertex position
-  glDisableVertexAttribArray( gVertexPos3DLocation );
+  glDisableVertexAttribArray( gVertAttrib );
 
   //Unbind program
   glUseProgram( NULL );
@@ -209,6 +209,7 @@ int main(int, char**){
         done = true;
     }
     ImGui_ImplSdlGL3_NewFrame(window);
+
     {
             static float f = 0.0f;
             static int counter = 0;

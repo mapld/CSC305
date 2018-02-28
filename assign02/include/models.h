@@ -1,10 +1,16 @@
 #pragma once
+#include <cmath>
 #include <vector>
+#include <glm/glm.hpp>
 #include <glm/common.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/trigonometric.hpp>
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <sstream>
+
+#define _USE_MATH_DEFINES
 
 struct Model{
   std::vector<glm::vec3> vertices;
@@ -119,6 +125,111 @@ Model createCubeModel(){
   model.triangleIndicies.push_back(glm::vec3(2, 5, 6));
   model.triangleIndicies.push_back(glm::vec3(0, 3, 4));
   model.triangleIndicies.push_back(glm::vec3(3, 4, 7));
+
+  return model;
+}
+
+Model createCylinderModel(glm::vec3 center, float radius, float height, int detail){
+  Model model;
+
+  int pi = glm::pi<float>();
+
+  float divisions = float(detail);
+
+  for(int i = 0; i < detail; i++){
+    //top
+    model.vertices.push_back(glm::vec3(
+                                       radius * glm::sin(2*pi *i/divisions),
+                                       center.y + height/2,
+                                       radius * glm::cos(2*pi* i/divisions))
+                                       );
+
+    float u = i/(divisions);
+    float v = 1;
+    model.uvCoords.push_back(glm::vec2(u,v));
+    //bottom
+    model.vertices.push_back(glm::vec3(
+                                       radius * glm::sin(2*pi *i/divisions),
+                                       center.y - height/2,
+                                       radius * glm::cos(2*pi* i/divisions))
+                             );
+    v = 0;
+    model.uvCoords.push_back(glm::vec2(u,v));
+  }
+
+  // extra vertex for edge
+  model.vertices.push_back(model.vertices[0]);
+  model.vertices.push_back(model.vertices[1]);
+  model.uvCoords.push_back(glm::vec2(1,1));
+  model.uvCoords.push_back(glm::vec2(1,0));
+
+  // top cap center
+  model.vertices.push_back(center + glm::vec3(0,height/2,0));
+  model.uvCoords.push_back(glm::vec2(1,1));
+
+  // bottom cap center
+  model.vertices.push_back(center + glm::vec3(0,-height/2,0));
+  model.uvCoords.push_back(glm::vec2(1,0));
+
+  int total_points = model.vertices.size();
+  int top_cap_i = total_points-2;
+  int bot_cap_i = total_points-1;
+  for(int i = 0; i < detail; i++){
+    int cur = (i*2);// % total_points;
+    int down = (cur+1);// % total_points;
+    int right = (cur+2);// % total_points;
+    int down_right = (cur+3);// % total_points;
+    model.triangleIndicies.push_back(glm::vec3(cur, down, right));
+    model.triangleIndicies.push_back(glm::vec3(down, down_right, right));
+    model.triangleIndicies.push_back(glm::vec3(cur,right,top_cap_i));
+    model.triangleIndicies.push_back(glm::vec3(down,down_right,bot_cap_i));
+  }
+  return model;
+}
+
+Model createSphereModel(glm::vec3 center, float radius, int n_latitude, int n_longitude){
+  Model model;
+  int pi = glm::pi<float>();
+
+  float n_lat = float(n_latitude);
+  float n_long = float(n_longitude);
+
+  for(int p = 0; p < n_lat; p++){
+    float u = 0.0f;
+    float v = 0.0f;
+    for(int q = 0; q < n_long; q++){
+      glm::vec3 vert = glm::vec3(
+                          center.x + glm::sin(pi * p/n_lat) * glm::cos(2*pi*q/n_long) * radius,
+                          center.y + glm::sin(pi * p / n_lat) * glm::sin(2*pi*q/n_long) * radius,
+                          center.z + cos(pi * p / n_lat) * radius
+                                );
+      model.vertices.push_back(vert);
+
+      // u = (vert.z - center.z / radius) / (2 * pi);
+      // v = pi - (atan2(vert.y - center.y, vert.x - center.x)) / pi;
+      glm::vec3 n = glm::normalize(vert - center);
+      u = atan2(n.x, n.z) / (2*pi) + 0.5;
+      v = n.y * 0.5 + 0.5;
+      model.uvCoords.push_back(glm::vec2(u,v));
+    }
+    // model.vertices.push_back(model.vertices[p*(n_long+1)]);
+    // model.uvCoords.push_back(glm::vec2(u,1));
+  }
+
+  int total_points = model.vertices.size();
+  for(int p = 0; p < n_lat; p++){
+    for(int q = 0; q < n_long; q++){
+      int cur = int(p * (n_long) + q) % total_points;
+      int right = (cur + 1) % total_points;
+      int up = int(cur + n_long) % total_points;
+      int up_right = (up + 1) % total_points;
+
+      glm::vec3 t1 = glm::vec3(cur, up_right, right);
+      glm::vec3 t2 = glm::vec3(cur, up, up_right);
+      model.triangleIndicies.push_back(t1);
+      model.triangleIndicies.push_back(t2);
+    }
+  }
 
   return model;
 }

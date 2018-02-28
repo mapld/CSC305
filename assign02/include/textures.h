@@ -1,7 +1,7 @@
 #pragma once
 #include <GL/gl3w.h> // opengl wrapper
 #include <SDL.h>
-#include <SDL_Image.h>
+#include <SDL_image.h>
 
 int MAX_WIDTH = 2048;
 int MAX_HEIGHT = 2048;
@@ -32,6 +32,9 @@ void checkerBoardTexture(){
 
 void textureFromImage(const char* filename){
   SDL_Surface* Surface = IMG_Load(filename);
+  if(!Surface){
+    std::cout << "Failed to load surface";
+  }
   int mode = GL_RGB;
   if(Surface->format->BytesPerPixel == 4) {
     mode = GL_RGBA;

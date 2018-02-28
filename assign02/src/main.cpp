@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <GL/gl3w.h> // opengl wrapper
 #include <SDL.h>
-#include <SDL_Image.h>
+#include <SDL_image.h>
 #include "gl_error_printing.h"
 #include "models.h"
 #include "textures.h"
@@ -235,7 +235,6 @@ int main(int, char**){
   ImGui::StyleColorsDark();
 
   // Model model = createCubeModel();
-  //Model model = loadModelFromObj("sphere.obj");
   // Model model = createSphereModel(glm::vec3(0,0,0), 1.0f, 200, 200);
   // Model model = createCylinderModel(glm::vec3(0,0,0), 1.0f, 2.0f, 200);
   Model model = createCubeModel();
@@ -279,7 +278,7 @@ int main(int, char**){
       ImGui::InputText("texture", textureName, sizeof(textureName));
       if (ImGui::Button("Load")){
         if(strlen(modelName) != 0){
-          model = loadModelFromObj(modelName);
+          loadModelFromObj(modelName, model);
         }
         createScene(model, textureName);
       }

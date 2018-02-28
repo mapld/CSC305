@@ -18,12 +18,14 @@ struct Model{
   std::vector<glm::vec3> triangleIndicies;
 };
 
-void writeModelToObj(Model& model, char* filename){
-  std::ofstream obj_file(filename);
-  for(glm::vec3 vert : model.vertices){
+void writeModelToObj(Model& model, std::string filename){
+  std::ofstream obj_file(filename.c_str());
+  for(int i = 0; i < model.vertices.size(); i++){
+    glm::vec3 vert = model.vertices[i];
     obj_file << "v " << vert.x << " " << vert.y << " " << vert.z << "\n";
   }
-  for(glm::vec2 texCoord : model.uvCoords){
+  for(int i = 0; i < model.uvCoords.size(); i++){
+    glm::vec2 texCoord = model.uvCoords[i];
     obj_file << "vt " << texCoord.x << " " << texCoord.y << "\n";
   }
 
@@ -39,17 +41,16 @@ void writeModelToObj(Model& model, char* filename){
   }
 }
 
-Model loadModelFromObj(char* filename){
-  Model model;
-
-  std::ifstream obj_file(filename);
+void loadModelFromObj(std::string filename, Model& model){
+  std::ifstream obj_file(filename.c_str());
   if(!obj_file.is_open()){
     std::cout << "ERROR: failed to read from file " << filename << "\n";
-    return model;
+    return;
   }
   std::string line;
   while(std::getline(obj_file,line)){
     std::istringstream iss(line);
+
     std::string lineType;
     iss >> lineType;
 
@@ -88,7 +89,6 @@ Model loadModelFromObj(char* filename){
     }
 
   }
-  return model;
 }
 
 Model createCubeModel(){

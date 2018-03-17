@@ -53,6 +53,9 @@ void applyAnimations(Scene& scene, float seconds_passed){
 
   for(BezierCurveAnimation& animation: scene.animations.bezier){
     AnimationBase base = animation.animation_base;
+    if(base.model_inst == -1){
+      continue;
+    }
     float total_animation_time = base.animation_total_time;
     float cT = fmod(seconds_passed, total_animation_time) / total_animation_time;
 

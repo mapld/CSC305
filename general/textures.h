@@ -30,6 +30,23 @@ void checkerBoardTexture(){
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, pixels);
 }
 
+void solidTexture(float r=0.0f, float g=0.0f, float b=0.0f){
+  const int width = 26;
+  const int height = 26;
+  float pixels[width*height*3];
+  for(int i = 0; i < width; i++){
+    for(int j = 0; j < height; j++){
+      int h = j*3;
+      int w = i*3;
+      pixels[h*width+w] = r;
+      pixels[h*width+w+1] = g;
+      pixels[h*width+w+2] = b;
+    }
+  }
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, pixels);
+}
+
 void textureFromImage(const char* filename){
   SDL_Surface* Surface = IMG_Load(filename);
   if(!Surface){

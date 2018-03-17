@@ -22,7 +22,7 @@ GLuint gProgramID = 0;
 GLint gVertAttrib = -1;
 GLuint gVAO = -1;
 GLuint matrixID;
-GLint texAttrib = -1;
+GLint colorAttrib = -1;
 GLuint tex;
 
 int BAT_BODY_I = 0;
@@ -34,7 +34,7 @@ void loadLinesIntoGL(BezierCurveAnimation& anim){
   int NUM_VERTS = anim.linePoints.size();
   int NUM_LINES = NUM_VERTS;
 
-  int OFFSET = 5;
+  int OFFSET = 6;
   GLfloat* vertexData = new GLfloat[anim.linePoints.size()*OFFSET];
   for(int i = 0; i < anim.linePoints.size(); i++){
     int loc = i*OFFSET;
@@ -42,8 +42,9 @@ void loadLinesIntoGL(BezierCurveAnimation& anim){
     vertexData[loc] = vert.x;
     vertexData[loc+1] = vert.y;
     vertexData[loc+2] = vert.z;
-    vertexData[loc+3] = 0.0f;
-    vertexData[loc+4] = 0.0f;
+    vertexData[loc+3] = 0.9f;
+    vertexData[loc+4] = 0.1f;
+    vertexData[loc+5] = 0.1f;
   }
 
   GLint* indexData = new GLint[anim.linePoints.size()];
@@ -56,7 +57,7 @@ void loadLinesIntoGL(BezierCurveAnimation& anim){
     glGenBuffers(1, &anim.lineVBO);
   }
   glBindBuffer(GL_ARRAY_BUFFER, anim.lineVBO);
-  glBufferData(GL_ARRAY_BUFFER, NUM_VERTS * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, NUM_VERTS * 6 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
 
   //Create IBO
   if(!anim.lineIBO){
@@ -70,15 +71,16 @@ void loadModelIntoGL(Model& model){
   int NUM_TRIANGLES = model.numTriangles();
   int NUM_VERTS = model.numVerticies();
 
-  GLfloat* vertexData = new GLfloat[model.vertices.size()*5];
+  int OFFSET = 6;
+  GLfloat* vertexData = new GLfloat[model.vertices.size()*OFFSET];
   for(int i = 0; i < model.vertices.size(); i++){
-    int OFFSET = 5;
     int loc = i*OFFSET;
     vertexData[loc] = model.vertices[i].x;
     vertexData[loc+1] = model.vertices[i].y;
     vertexData[loc+2] = model.vertices[i].z;
-    vertexData[loc+3] = model.uvCoords[i].x;
-    vertexData[loc+4] = model.uvCoords[i].y;
+    vertexData[loc+3] = model.colors[i].x;
+    vertexData[loc+4] = model.colors[i].y;
+    vertexData[loc+5] = model.colors[i].z;
   }
 
     //IBO data
@@ -93,7 +95,7 @@ void loadModelIntoGL(Model& model){
     //Create VBO
   glGenBuffers(1, &model.VBO);
   glBindBuffer(GL_ARRAY_BUFFER, model.VBO);
-  glBufferData(GL_ARRAY_BUFFER, NUM_VERTS * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, NUM_VERTS * 6 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
 
     //Create IBO
   glGenBuffers(1, &model.IBO);
@@ -124,10 +126,10 @@ void addBat(Scene& scene, std::vector<glm::vec3> curvePoints, float BAT_PATH_TIM
 
     // add animations
     addLinearScaleAnimationToScene(scene, body_inst_num, BAT_PATH_TIME, 0.2f, 0.2f+scaleDiff);
-    addWingAnimation(scene, left_wing_inst, true, 1.2f);
-    addWingAnimation(scene, right_wing_inst, false, 1.2f);
+    addWingAnimation(scene, left_wing_inst, true, 0.6f);
+    addWingAnimation(scene, right_wing_inst, false, 0.6f);
 
-    Model point = createRectModel(0.01f, 0.01f);
+    Model point = createRectModel(0.01f, 0.01f, RED);
     loadModelIntoGL(point);
 
     // Model secondModel = createRectModel(0.4,0.4);
@@ -161,12 +163,12 @@ int initScene(Scene& scene){
     const GLchar* vertexShaderSource[] = {
       "#version 140\n"
       "in vec3 LVertexPos3D;"
-      "in vec2 TexCoord;"
-      "out vec2 texcoord;"
+      "in vec3 incolor;"
+      "out vec3 v_color;"
       "uniform mat4 MVP;"
       "void main() {"
       "gl_Position = MVP * vec4( LVertexPos3D.x, LVertexPos3D.y, LVertexPos3D.z, 1 );"
-      "texcoord=TexCoord;"
+      "v_color=incolor;"
       "}"
     };
     glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
@@ -179,17 +181,15 @@ int initScene(Scene& scene){
         return -1;
     }
 
-
     glAttachShader(gProgramID, vertexShader);
 
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     const GLchar* fragmentShaderSource[] =
       {
         "#version 140\n"
-        "in vec2 texcoord;"
+        "in vec3 v_color;"
         "out vec4 LFragment;"
-        "uniform sampler2D tex;"
-        "void main() { LFragment = texture(tex, texcoord) * vec4( 1.0, 1.0, 1.0, 1.0 ) + vec4( 0.1, 0.1, 0.1, 1.0 ); }"
+        "void main() { LFragment = vec4( v_color , 1.0 ); }"
       };
     glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
 
@@ -218,24 +218,25 @@ int initScene(Scene& scene){
       printf( "LVertexPos3D is not a valid glsl program variable!\n" );
       return -1;
     }
-    texAttrib = glGetAttribLocation(gProgramID, "TexCoord");
-    if(texAttrib == -1){
-      printf( "TexCoord is not a valid glsl program variable!\n" );
+    colorAttrib = glGetAttribLocation(gProgramID, "incolor");
+    if(colorAttrib == -1){
+      printf( "incolor is not a valid glsl program variable!\n" );
       return -1;
     }
 
     //texture
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glGenTextures(1, &tex);
+    // glBindTexture(GL_TEXTURE_2D, tex);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // if(textureFilename.size() > 0){
     //   textureFromImage(textureFilename.c_str());
     // }
-    checkerBoardTexture();
+    // checkerBoardTexture();
+    // solidTexture();
 
     // add first bat to scene
     std::vector<glm::vec3> curve_points;
@@ -261,11 +262,11 @@ void renderModel(Model& m, glm::mat4 mvp){
 
   //Set vertex data
   glBindBuffer( GL_ARRAY_BUFFER, m.VBO );
-  glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
+  glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL);
 
   // texture coords
-  glEnableVertexAttribArray( texAttrib);
-  glVertexAttribPointer( texAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3*sizeof(GLfloat)));
+  glEnableVertexAttribArray( colorAttrib);
+  glVertexAttribPointer( colorAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3*sizeof(GLfloat)));
 
   //Set index data and render
   glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m.IBO );
@@ -278,11 +279,11 @@ void renderLines(BezierCurveAnimation& animation){
 
     //Set vertex data
     glBindBuffer( GL_ARRAY_BUFFER, animation.lineVBO );
-    glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
+    glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL);
 
     // texture coords
-    glEnableVertexAttribArray( texAttrib);
-    glVertexAttribPointer( texAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(sizeof(GLfloat)));
+    glEnableVertexAttribArray( colorAttrib);
+    glVertexAttribPointer( colorAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3*sizeof(GLfloat)));
 
     //Set index data and render
     glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, animation.lineIBO );

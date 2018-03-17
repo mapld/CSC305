@@ -17,6 +17,7 @@ struct Model{
   std::vector<glm::vec3> vertices;
   std::vector<glm::vec2> uvCoords;
   std::vector<glm::vec3> triangleIndicies;
+  std::vector<glm::vec3> colors;
   GLuint VBO = 0;
   GLuint IBO = 0;
   int numTriangles(){return triangleIndicies.size()*3;}

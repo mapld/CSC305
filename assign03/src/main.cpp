@@ -12,6 +12,8 @@
 #include "models_2D.h"
 #include "textures.h"
 #include "scene.h"
+#include "animations.h"
+#include "bezier.h"
 
 int SCREEN_HEIGHT= 720;
 int SCREEN_WIDTH=  1280;
@@ -28,15 +30,15 @@ int BAT_LEFT_WING_I = 1;
 int BAT_RIGHT_WING_I = 2;
 int POINT_I = 3;
 
-void loadLinesIntoGL(Scene& scene){
-  int NUM_VERTS = scene.linePoints.size();
+void loadLinesIntoGL(BezierCurveAnimation& anim){
+  int NUM_VERTS = anim.linePoints.size();
   int NUM_LINES = NUM_VERTS;
 
   int OFFSET = 5;
-  GLfloat* vertexData = new GLfloat[scene.linePoints.size()*OFFSET];
-  for(int i = 0; i < scene.linePoints.size(); i++){
+  GLfloat* vertexData = new GLfloat[anim.linePoints.size()*OFFSET];
+  for(int i = 0; i < anim.linePoints.size(); i++){
     int loc = i*OFFSET;
-    glm::vec3 vert = scene.linePoints[i];
+    glm::vec3 vert = anim.linePoints[i];
     vertexData[loc] = vert.x;
     vertexData[loc+1] = vert.y;
     vertexData[loc+2] = vert.z;
@@ -44,23 +46,23 @@ void loadLinesIntoGL(Scene& scene){
     vertexData[loc+4] = 0.0f;
   }
 
-  GLint* indexData = new GLint[scene.linePoints.size()];
-  for(int i = 0; i < scene.linePoints.size(); i++){
+  GLint* indexData = new GLint[anim.linePoints.size()];
+  for(int i = 0; i < anim.linePoints.size(); i++){
     indexData[i] = i;
   }
 
   //Create VBO
-  if(!scene.lineVBO){
-    glGenBuffers(1, &scene.lineVBO);
+  if(!anim.lineVBO){
+    glGenBuffers(1, &anim.lineVBO);
   }
-  glBindBuffer(GL_ARRAY_BUFFER, scene.lineVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, anim.lineVBO);
   glBufferData(GL_ARRAY_BUFFER, NUM_VERTS * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
 
   //Create IBO
-  if(!scene.lineIBO){
-    glGenBuffers(1, &scene.lineIBO);
+  if(!anim.lineIBO){
+    glGenBuffers(1, &anim.lineIBO);
   }
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, scene.lineIBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, anim.lineIBO);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, NUM_LINES * sizeof(GLuint), indexData, GL_STATIC_DRAW);
 }
 
@@ -101,21 +103,49 @@ void loadModelIntoGL(Model& model){
 
 }
 
-glm::vec3 getBezierPoint(Scene& scene, float t){
-  std::vector<glm::vec3> controlPoints = scene.points;
-  return powf((1-t), 3)*controlPoints[0]
-    + 3.0f * powf((1-t),2) * t * controlPoints[1]
-    + 3.0f * (1 - t) * powf(t,2) * controlPoints[2]
-    + powf(t,3) * controlPoints[3];
-}
+// TODO : provide the animation to this function (get rid of scaleDiff and bat path time)
+void addBat(Scene& scene, std::vector<glm::vec3> curvePoints, float BAT_PATH_TIME = 3.5f, float scaleDiff = 1.0f){
+    Model body = createBatBody();
+    loadModelIntoGL(body);
+    scene.models[BAT_BODY_I] = body;
 
-void addCurveFromPoints(Scene& scene){
-  scene.linePoints.clear();
-  float NUM_LINES = 100;
-  for(float t = 0; t < 1; t+= 1.0f/NUM_LINES){
-    glm::vec3 bezier_point = getBezierPoint(scene, t);
-    scene.linePoints.push_back(bezier_point);
-  }
+    Model leftWing = createBatWing();
+    loadModelIntoGL(leftWing);
+    scene.models[BAT_LEFT_WING_I] = leftWing;
+
+    Model rightWing = createBatWing();
+    loadModelIntoGL(rightWing);
+    scene.models[BAT_RIGHT_WING_I] = rightWing;
+
+    // add models to scene:
+    int body_inst_num = addModelToScene(scene, BAT_BODY_I);
+    int left_wing_inst = addModelToScene(scene, BAT_LEFT_WING_I, body_inst_num, glm::vec3(-0.1f,0,0));
+    int right_wing_inst = addModelToScene(scene, BAT_RIGHT_WING_I, body_inst_num, glm::vec3(0.1f,0,0));
+
+    // add animations
+    addLinearScaleAnimationToScene(scene, body_inst_num, BAT_PATH_TIME, 0.2f, 0.2f+scaleDiff);
+    addWingAnimation(scene, left_wing_inst, true, 1.2f);
+    addWingAnimation(scene, right_wing_inst, false, 1.2f);
+
+    Model point = createRectModel(0.01f, 0.01f);
+    loadModelIntoGL(point);
+
+    // Model secondModel = createRectModel(0.4,0.4);
+    // loadModelIntoGL(secondModel);
+    // scene.models.push_back(secondModel);
+
+    matrixID = glGetUniformLocation(gProgramID, "MVP");
+
+    BezierCurveAnimation anim;
+    anim.animation_base.model_inst = body_inst_num;
+    anim.animation_base.animation_total_time = BAT_PATH_TIME;
+    anim.pointModel = point; // totally inconsistently copying model for each animation instead of using a reference (ModelInst) to it like elsewhere ¯\_(ツ)_/¯
+    anim.points = curvePoints;
+
+    addCurveFromPoints(anim);
+    loadLinesIntoGL(anim);
+
+    addBezierCurveAnimation(scene, anim);
 }
 
 int initScene(Scene& scene){
@@ -207,36 +237,21 @@ int initScene(Scene& scene){
     // }
     checkerBoardTexture();
 
-    Model body = createBatBody();
-    loadModelIntoGL(body);
-    scene.models[BAT_BODY_I] = body;
+    // add first bat to scene
+    std::vector<glm::vec3> curve_points;
+    curve_points.push_back(glm::vec3(0.1,0.2,0.5));
+    curve_points.push_back(glm::vec3(0.7,0.2,0.5));
+    curve_points.push_back(glm::vec3(0.5,0.5,0.5));
+    curve_points.push_back(glm::vec3(0.6,0.8,0.5));
+    addBat(scene, curve_points, 3.5f, 1.0f);
 
-    Model leftWing = createBatWing();
-    loadModelIntoGL(leftWing);
-    scene.models[BAT_LEFT_WING_I] = leftWing;
-
-    Model rightWing = createBatWing();
-    loadModelIntoGL(rightWing);
-    scene.models[BAT_RIGHT_WING_I] =rightWing;
-
-    Model point = createRectModel(0.01f, 0.01f);
-    loadModelIntoGL(point);
-    scene.pointModel = point;
-
-    // Model secondModel = createRectModel(0.4,0.4);
-    // loadModelIntoGL(secondModel);
-    // scene.models.push_back(secondModel);
-
-    matrixID = glGetUniformLocation(gProgramID, "MVP");
-
-    scene.points.push_back(glm::vec3(0.1,0.1,0.5));
-    scene.points.push_back(glm::vec3(0.7,0.2,0.5));
-    scene.points.push_back(glm::vec3(0.5,0.5,0.5));
-    scene.points.push_back(glm::vec3(0.6,0.8,0.5));
-
-    addCurveFromPoints(scene);
-
-    loadLinesIntoGL(scene);
+    // second bat
+    curve_points.clear();
+    curve_points.push_back(glm::vec3(1.6,0.2,0.5));
+    curve_points.push_back(glm::vec3(0.5,0.2,0.5));
+    curve_points.push_back(glm::vec3(0.3,0.5,0.5));
+    curve_points.push_back(glm::vec3(0.3,0.1,0.5));
+    addBat(scene, curve_points, 7.5f, 0.0f);
 
     return 0;
 }
@@ -257,21 +272,21 @@ void renderModel(Model& m, glm::mat4 mvp){
   glDrawElements( GL_TRIANGLES, m.numTriangles(), GL_UNSIGNED_INT, NULL );
 }
 
-void renderLines(Scene& scene){
-  glm::mat4 mvp = scene.lineMVP;
-  glUniformMatrix4fv(matrixID, 1, GL_FALSE, &mvp[0][0]);
+void renderLines(BezierCurveAnimation& animation){
+    glm::mat4 mvp = animation.lineMVP;
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &mvp[0][0]);
 
-  //Set vertex data
-  glBindBuffer( GL_ARRAY_BUFFER, scene.lineVBO );
-  glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
+    //Set vertex data
+    glBindBuffer( GL_ARRAY_BUFFER, animation.lineVBO );
+    glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
 
-  // texture coords
-  glEnableVertexAttribArray( texAttrib);
-  glVertexAttribPointer( texAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(sizeof(GLfloat)));
+    // texture coords
+    glEnableVertexAttribArray( texAttrib);
+    glVertexAttribPointer( texAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(sizeof(GLfloat)));
 
-  //Set index data and render
-  glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, scene.lineIBO );
-  glDrawElements( GL_LINE_STRIP, scene.linePoints.size(), GL_UNSIGNED_INT, NULL );
+    //Set index data and render
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, animation.lineIBO );
+    glDrawElements( GL_LINE_STRIP, animation.linePoints.size(), GL_UNSIGNED_INT, NULL );
 }
 
 void movePointUnderMouse(Scene& scene){
@@ -284,108 +299,88 @@ void movePointUnderMouse(Scene& scene){
   float mouseX = (float)mx / (float)SCREEN_HEIGHT;
   float mouseY = (float)my / (float)SCREEN_HEIGHT;
   if(scene.pointUnderMouse == -1){
-    for(int i = 0; i < scene.points.size(); i++){
-      glm::vec3 point = scene.points[i];
-      if(abs(mouseX - point.x) + abs(mouseY - point.y) < MOUSE_THRESHOLD){
-        std::cout << mouseX << "\n";
-        scene.pointUnderMouse = i;
+    for(int j = 0; j < scene.animations.bezier.size(); j++){
+      BezierCurveAnimation anim = scene.animations.bezier[j];
+      // std::cout << "mouse: " << mouseX << "\n";
+      for(int i = 0; i < anim.points.size(); i++){
+        glm::vec3 point = anim.points[i];
+        // std::cout << "point:" << point.x << "\n";
+        if(abs(mouseX - point.x) + abs(mouseY - point.y) < MOUSE_THRESHOLD){
+          std::cout << "mouse: " << mouseX << "\n";
+          scene.pointUnderMouse = i;
+          scene.curveUnderMouse = j;
+        }
       }
     }
   }
   else{
-    scene.points[scene.pointUnderMouse].x = mouseX;
-    scene.points[scene.pointUnderMouse].y = mouseY;
+    if(scene.curveUnderMouse == -1){
+      return;
+    }
+    BezierCurveAnimation& anim = scene.animations.bezier[scene.curveUnderMouse];
+    anim.points[scene.pointUnderMouse].x = mouseX;
+    anim.points[scene.pointUnderMouse].y = mouseY;
   }
 }
 
+
 void transformScene(glm::vec3 camera, Uint32 time, Scene& scene){
-  movePointUnderMouse(scene);
+  if(scene.editMode){
+    movePointUnderMouse(scene);
+  }
+
 
   float secondsPassed = (float)time / 1000.0f;
   scene.mvps.clear();
 
-  int pi = glm::pi<float>();
-  float topAngle = 0.5f;
-  float bottomAngle = -0.5f;
-  float totalAnimationTime = 1.5f;
-  float wingAdjFactor = 0.05f;
-  float curAnimationTime = fmod(secondsPassed, totalAnimationTime);
+  applyAnimations(scene, secondsPassed);
 
-  float leftAngle;
-  float wingAdj;
-  if(curAnimationTime >= totalAnimationTime / 2.0f){
-    float animationTimeAdj = (curAnimationTime - totalAnimationTime/2.0f) / (totalAnimationTime/2.0f);
-    leftAngle = bottomAngle + animationTimeAdj*(topAngle - bottomAngle);
-    wingAdj = wingAdjFactor - 2*(animationTimeAdj* wingAdjFactor);
-  }
-  else{
-    float animationTimeAdj = curAnimationTime / (totalAnimationTime/2.0f);
-    leftAngle = topAngle + animationTimeAdj*(bottomAngle - topAngle);
-    wingAdj = -1*wingAdjFactor + 2*(animationTimeAdj* wingAdjFactor);
-  }
-  // std::cout << "time: " << curAnimationTime << "angle: " << leftAngle << "\n";
-
-  float bezierAnimationTime = 2.0f;
-  float cT = fmod(secondsPassed, bezierAnimationTime) / bezierAnimationTime;
-
-  float ADJ_X_FOR_SCALE = 0.04f;
-
-  // glm::vec3 bat_location =glm::vec3(1.f, 0.3f, 0.f);
-  glm::vec3 bat_location = getBezierPoint(scene, cT);
-
-  float scaleFactor = 0.2f + cT;
-  glm::vec3 bat_scaling = glm::vec3(scaleFactor, scaleFactor, 1.f);
-
-  wingAdj *= scaleFactor;
-
-
-  // glm::mat4 projection = glm::ortho(0.0f, (float) SCREEN_WIDTH / (float)SCREEN_HEIGHT, 1.0f, 0.0f, 0.1f, 100.0f);
   glm::mat4 projection = glm::ortho(0.0f, (float) SCREEN_WIDTH / (float)SCREEN_HEIGHT, 1.0f, 0.0f, 1.0f , 100.0f);
-
   glm::mat4 view = glm::lookAt(
                                camera, // Camera is at (4,3,3), in World Space
                                glm::vec3(0,0,0), // looks at the origin
                                glm::vec3(0,1,0)
                                );
 
-  glm::mat4 body_model = glm::translate(glm::mat4(1.f), bat_location);
-  body_model = glm::scale(body_model, bat_scaling);
-
-  glm::mat4 mvp = projection * view * body_model;
-  scene.mvps.push_back(mvp);
-
-  // left wing
-  glm::mat4 model = glm::mat4(1.f);
-  model = glm::translate(model, bat_location);
-  model = glm::translate(model, glm::vec3(-0.1f *scaleFactor, wingAdj, 0.f));
-  // model = glm::translate(model, glm::vec3(ADJ_X_FOR_SCALE/scaleFactor, 0, 0.f));
-  model = glm::scale(model, bat_scaling);
-  model = glm::rotate(model, leftAngle, glm::vec3(0,0,1));
-  mvp = projection * view * model;
-  scene.mvps.push_back(mvp);
-
-  // right wing
-  model = glm::mat4(1.f);
-  model = glm::translate(model, bat_location);
-  model = glm::translate(model, glm::vec3(0.1f *scaleFactor, wingAdj, 0.f));
-  // model = glm::translate(model, glm::vec3(-ADJ_X_FOR_SCALE/scaleFactor, 0, 0.f));
-  model = glm::scale(model, bat_scaling);
-  model = glm::rotate(model, -leftAngle, glm::vec3(0,0,1));
-  mvp = projection * view * model;
-  scene.mvps.push_back(mvp);
-
-  // points
-  // point movement:
-  // scene.points[1].x = 0.4 + secondsPassed / 50;
-
-  for(int i = 0; i < scene.points.size(); i++){
-    model = glm::translate(glm::mat4(1.f), scene.points[i]);
-    mvp = projection * view * model;
+  for(int inst_num = 0; inst_num < scene.modelInstances.size(); inst_num++){
+    glm::mat4 model = glm::mat4(1.f);
+    int parent_inst_num = scene.modelInstances[inst_num].parent;
+    glm::vec3 parent_transform = glm::vec3(0,0,0);
+    glm::vec3 parent_scaling = glm::vec3(1,1,1);
+    if(parent_inst_num >= 0){
+      parent_transform = scene.modelInstances[parent_inst_num].transform.position;
+      parent_scaling = scene.modelInstances[parent_inst_num].transform.scale;
+    }
+    // std::cout << "inst_num: " << inst_num << " , parent: " << parent_inst_num << " , parent y: " << parent_transform.y << "\n";
+    glm::vec3 child_scaling = scene.modelInstances[inst_num].transform.scale;
+    glm::vec3 child_transform = scene.modelInstances[inst_num].transform.position;
+    glm::vec3 final_child_transform = parent_transform + glm::vec3(child_transform.x*parent_scaling.x,
+                                                                  child_transform.y*parent_scaling.y,
+                                                                  child_transform.z*parent_scaling.z);
+    scene.modelInstances[inst_num].transform.position = final_child_transform;
+    model = glm::translate(model, final_child_transform);
+    model = glm::scale(model, parent_scaling);
+    model = glm::scale(model, child_scaling);
+    model = glm::rotate(model, scene.modelInstances[inst_num].transform.rotation, glm::vec3(0,0,1));
+    glm::mat4 mvp = projection * view * model;
     scene.mvps.push_back(mvp);
   }
 
-  model = glm::mat4(1.f);
-  scene.lineMVP = projection * view * model;
+
+  for(int j = 0; j < scene.animations.bezier.size(); j++){
+    BezierCurveAnimation& anim = scene.animations.bezier[j];
+    // point movement:
+    // anim.points[1].x = 0.4 + secondsPassed / 50;
+    for(int i = 0; i < anim.points.size(); i++){
+      glm::mat4 model = glm::translate(glm::mat4(1.f), anim.points[i]);
+      glm::mat4 mvp = projection * view * model;
+      scene.mvps.push_back(mvp);
+    }
+
+    glm::mat4 model = glm::mat4(1.f);
+    anim.lineMVP = projection * view * model;
+  }
+
 }
 
 
@@ -396,21 +391,26 @@ void renderScene( Scene& scene){
   glEnableVertexAttribArray( gVertAttrib );
 
   int i;
-  for(i = 0; i < scene.models.size(); i++){
-    renderModel(scene.models[i], scene.mvps[i]);
+  for(i = 0; i < scene.modelInstances.size(); i++){
+    int mI = scene.modelInstances[i].modelNum;
+    renderModel(scene.models[mI], scene.mvps[i]);
   }
 
-  addCurveFromPoints(scene);
-  loadLinesIntoGL(scene);
+  for(BezierCurveAnimation& anim : scene.animations.bezier){
+    addCurveFromPoints(anim);
+    loadLinesIntoGL(anim);
+    if(scene.editMode){
+      // any remaining mvps are drawn as points
+      int start = i;
+      for(;i-start < anim.points.size(); i++){
+        renderModel(anim.pointModel, scene.mvps[i]);
+      }
 
-  // any remaining mvps are drawn as points
-  for(;i < scene.mvps.size(); i++){
-    renderModel(scene.pointModel, scene.mvps[i]);
+      renderLines(anim);
+    }
   }
 
-  renderLines(scene);
-
-  //Disable vertex position
+    //Disable vertex position
   glDisableVertexAttribArray( gVertAttrib );
 
   //Unbind program
@@ -495,6 +495,9 @@ int main(int, char**){
     ImGui_ImplSdlGL3_NewFrame(window);
     {
       // imgui stuff here
+      if (ImGui::Button("Edit")){
+        scene.editMode = !scene.editMode;
+      }
     }
 
 

@@ -1,23 +1,5 @@
 * Assignment 3: Animation
-** Plan
-- [X] create bat model (Body and two wings)
-- [X] flapping wings animation
-- [X] line-drawing animation points
-- [X] bezier curve animation path
-- [X] bat move along path
-- [X] scaling while moving
-- [ ] move line points with mouse
-- [ ] UI for editing / playing
-
-Possible extensions:
-- Bezier curve bat model
-- Save animation as MOV/AVI
-- Good code comments
-- Motion blur of moving objects
-- Efficient Bezier evaluation (recursive deCastlejau split rule)
-
-Line/curve drawing:
-- add point model, draw list of points
-- use drawlines to draw lines between points
-- make bezier curve using 4 points
-- get x amount of points on 
+- Implemented basics
+- Editing bezier curves on the fly
+- Use git
+- Use bezier curves for modelling the bat 

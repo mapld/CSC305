@@ -24,6 +24,61 @@ struct Model{
   int numVerticies(){return vertices.size();}
 };
 
+struct RenderVars{
+  GLint vertAttrib;
+  GLuint matrixID;
+  GLint otherAttrib;
+};
+
+void renderModel(Model& m, glm::mat4 mvp, RenderVars rv, int offset = 2){
+  glUniformMatrix4fv(rv.matrixID, 1, GL_FALSE, &mvp[0][0]);
+
+  //Set vertex data
+  glBindBuffer( GL_ARRAY_BUFFER, m.VBO );
+  glVertexAttribPointer( rv.vertAttrib, 3, GL_FLOAT, GL_FALSE, (offset+3) * sizeof(GLfloat), NULL);
+
+  // texture coords
+  glEnableVertexAttribArray( rv.otherAttrib);
+  glVertexAttribPointer( rv.otherAttrib, offset, GL_FLOAT, GL_FALSE, (offset+3) * sizeof(GLfloat), (void*)(3*sizeof(GLfloat)));
+
+  //Set index data and render
+  glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m.IBO );
+  glDrawElements( GL_TRIANGLES, m.numTriangles(), GL_UNSIGNED_INT, NULL );
+}
+
+void loadModelToGL(Model& model){
+    GLfloat* vertexData = new GLfloat[model.vertices.size()*5];
+    for(int i = 0; i < model.vertices.size(); i++){
+      int OFFSET = 5;
+      int loc = i*OFFSET;
+      vertexData[loc] = model.vertices[i].x;
+      vertexData[loc+1] = model.vertices[i].y;
+      vertexData[loc+2] = model.vertices[i].z;
+      vertexData[loc+3] = model.uvCoords[i].x;
+      vertexData[loc+4] = model.uvCoords[i].y;
+    }
+
+     //IBO data
+    GLint* indexData = new GLint[model.triangleIndicies.size()*3];
+    for(int i = 0; i < model.triangleIndicies.size(); i++){
+      int loc = i * 3;
+      indexData[loc] = model.triangleIndicies[i].x;
+      indexData[loc+1] = model.triangleIndicies[i].y;
+      indexData[loc+2] = model.triangleIndicies[i].z;
+    }
+
+      //Create VBO
+    glGenBuffers(1, &model.VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, model.VBO);
+    glBufferData(GL_ARRAY_BUFFER, model.numVerticies() * 5 * sizeof(GLfloat), vertexData, GL_STATIC_DRAW);
+
+      //Create IBO
+    glGenBuffers(1, &model.IBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.IBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, model.numTriangles() * sizeof(GLuint), indexData, GL_STATIC_DRAW);
+
+}
+
 void writeModelToObj(Model& model, std::string filename){
   std::ofstream obj_file(filename.c_str());
   for(int i = 0; i < model.vertices.size(); i++){

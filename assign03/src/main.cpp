@@ -257,21 +257,7 @@ int initScene(Scene& scene){
     return 0;
 }
 
-void renderModel(Model& m, glm::mat4 mvp){
-  glUniformMatrix4fv(matrixID, 1, GL_FALSE, &mvp[0][0]);
 
-  //Set vertex data
-  glBindBuffer( GL_ARRAY_BUFFER, m.VBO );
-  glVertexAttribPointer( gVertAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL);
-
-  // texture coords
-  glEnableVertexAttribArray( colorAttrib);
-  glVertexAttribPointer( colorAttrib, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3*sizeof(GLfloat)));
-
-  //Set index data and render
-  glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m.IBO );
-  glDrawElements( GL_TRIANGLES, m.numTriangles(), GL_UNSIGNED_INT, NULL );
-}
 
 void renderLines(BezierCurveAnimation& animation){
     glm::mat4 mvp = animation.lineMVP;

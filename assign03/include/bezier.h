@@ -9,9 +9,10 @@ glm::vec3 getBezierPoint(const BezierCurveAnimation& animation, float t){
     + powf(t,3) * controlPoints[3];
 }
 
+// Takes 4 points and creates a larger series of points that can be drawn as a bezier curve
 void addCurveFromPoints(BezierCurveAnimation& animation){
   animation.linePoints.clear();
-  float NUM_LINES = 100;
+  float NUM_LINES = 400;
   for(float t = 0; t < 1; t+= 1.0f/NUM_LINES){
     glm::vec3 bezier_point = getBezierPoint(animation, t);
     animation.linePoints.push_back(bezier_point);

@@ -2,6 +2,7 @@
 #include <GL/gl3w.h> // opengl wrapper
 #include <SDL.h>
 #include <SDL_image.h>
+#include <string>
 
 int MAX_WIDTH = 2048;
 int MAX_HEIGHT = 2048;
@@ -73,4 +74,25 @@ void textureFromImage(const char* filename){
   }
 
   glTexImage2D(GL_TEXTURE_2D, 0, mode, Surface->w, Surface->h, 0, mode, GL_UNSIGNED_BYTE, Surface->pixels);
+}
+
+void textureCubeMapFromImages(){
+  const std::string skyList[] = {"miramar_ft", "miramar_bk",  "miramar_up","miramar_dn", "miramar_rt", "miramar_lf"};
+
+  for(int i=0; i < 6; ++i) {
+    std::cout << "testi:" << i << "\n";
+    const char* filename = ("Textures/" + skyList[i] + ".png").c_str();
+    SDL_Surface* Surface = IMG_Load(filename);
+    if(!Surface){
+      std::cout << "Failed to load surface";
+    }
+    int mode = GL_RGB;
+    if(Surface->format->BytesPerPixel == 4) {
+      mode = GL_RGBA;
+    }
+
+    std::cout << "testi2\n";
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, mode, Surface->w, Surface->h, 0, mode, GL_UNSIGNED_BYTE, Surface->pixels);
+    std::cout << "testi3\n";
+  }
 }

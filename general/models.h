@@ -77,6 +77,8 @@ void loadModelToGL(Model& model){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.IBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, model.numTriangles() * sizeof(GLuint), indexData, GL_STATIC_DRAW);
 
+    delete vertexData;
+    delete indexData;
 }
 
 void writeModelToObj(Model& model, std::string filename){

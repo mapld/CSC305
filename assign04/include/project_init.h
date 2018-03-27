@@ -36,6 +36,7 @@ SdlHandle initSDL(int screen_width, int screen_height){
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
+  SDL_SetRelativeMouseMode(SDL_TRUE);
 
   SDL_DisplayMode current;
   SDL_GetCurrentDisplayMode(0, &current);

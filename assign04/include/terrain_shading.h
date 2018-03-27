@@ -1,21 +1,27 @@
 #pragma once
 #include <GL/gl3w.h> // opengl wrapper
 
-int loadTerrainShaders(){
+
+const GLchar* skybox_vshader =
+#include "skybox_vshader.glsl"
+  ;
+const GLchar* skybox_fshader =
+#include "skybox_fshader.glsl"
+  ;
+
+const GLchar* terrain_vshader =
+#include "terrain_vshader.glsl"
+  ;
+const GLchar* terrain_fshader =
+#include "terrain_fshader.glsl"
+  ;
+
+
+int loadShaderProgram(const GLchar* vshader, const GLchar* fshader){
   GLuint program_id = glCreateProgram();
 
   GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
-    const GLchar* vertexShaderSource[] = {
-      "#version 140\n"
-      "in vec3 LVertexPos3D;"
-      "in vec2 TexCoord;"
-      "out vec2 texcoord;"
-      "uniform mat4 MVP;"
-      "void main() {"
-      "gl_Position = MVP * vec4( LVertexPos3D.x, LVertexPos3D.y, LVertexPos3D.z, 1 );"
-      "texcoord=TexCoord;"
-      "}"
-    };
+    const GLchar* vertexShaderSource[] = {vshader};
     glShaderSource(vertexShader, 1, vertexShaderSource, NULL);
     glCompileShader(vertexShader);
 
@@ -30,14 +36,7 @@ int loadTerrainShaders(){
     glAttachShader(program_id, vertexShader);
 
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    const GLchar* fragmentShaderSource[] =
-      {
-        "#version 140\n"
-        "in vec2 texcoord;"
-        "out vec4 LFragment;"
-        "uniform sampler2D tex;"
-        "void main() { LFragment = texture(tex, texcoord) * vec4( 1.0, 1.0, 1.0, 1.0 ) + vec4( 0.1, 0.1, 0.1, 1.0 ); }"
-      };
+    const GLchar* fragmentShaderSource[] = {fshader};
     glShaderSource(fragmentShader, 1, fragmentShaderSource, NULL);
 
     glCompileShader(fragmentShader);

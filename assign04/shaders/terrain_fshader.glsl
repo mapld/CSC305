@@ -13,6 +13,7 @@ uniform vec3 viewPos;
 
 in vec2 uv;
 in float heightFactor;
+in float waterHeight;
 // Fragment position in world space coordinates
 in vec3 fragPos;
 
@@ -42,7 +43,6 @@ void main() {
     vec3 N = normalize( cross( normalize(C-D), normalize(A-B)) );
 
     float h = (texture(noiseTex,uv).r + 1.0f) / 2.0f;
-    float waterHeight = 0.35f;
     if(h < waterHeight){
       N = normalize(vec3(0,1,0));
     }
@@ -56,7 +56,7 @@ void main() {
     slope = max(slope, (D.y - fragPos.y) / (slopeOffset*f_width / size.x));
 
     // base intensity
-    float intensity = 0.1f;
+    float intensity = 0.4f;
 
     // diffuse
     float diffuseFactor = 0.5f;

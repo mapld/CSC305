@@ -10,6 +10,7 @@ uniform mat4 MVP;
 out vec2 uv;
 out vec3 fragPos;
 out float heightFactor;
+out float waterHeight;
 
 void main() {
     uv = TexCoord;
@@ -19,12 +20,14 @@ void main() {
     /// TODO: Get height h at uv
     float h = (texture(noiseTex,uv).r + 1.0f) / 2.0f;
 
-    if(h < 0.35f) h = 0.35f;
+    float water = 0.40f;
+    if(h < water) h = water;
 
     h *= hf;
 
     fragPos = vposition.xyz + vec3(0,h,0);
     gl_Position = MVP*vec4(vposition.x, vposition.y + h, vposition.z, 1.0);
     heightFactor = hf;
+    waterHeight = water;
 }
 )"

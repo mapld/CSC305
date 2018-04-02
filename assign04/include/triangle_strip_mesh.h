@@ -15,13 +15,17 @@ struct TriangleStripMesh{
   GLuint IBO;
 };
 
-TriangleStripMesh createPlane(glm::vec2 size = glm::vec2(5.0f, 5.0f)){
+TriangleStripMesh createPlane(glm::vec2 size = glm::vec2(100.0f, 100.0f)){
   TriangleStripMesh mesh;
 
   int n_width = 256; // Grid resolution
   int n_height = 256;
   float f_width = size.x; // Grid width, centered at 0,0
   float f_height = size.y;
+
+  int splits = 10;
+
+  int split_size = f_width / splits;
 
   ///--- Vertex positions, tex coords
   for(int j=0; j<n_height; ++j) {
@@ -30,6 +34,7 @@ TriangleStripMesh createPlane(glm::vec2 size = glm::vec2(5.0f, 5.0f)){
       float y = (-f_height/2) + ((float)i / (float)n_height)*f_height;
       mesh.vertices.push_back(glm::vec3(x, 0.0f, y));
       mesh.uv_coords.push_back( glm::vec2( i/(float)(n_width-1), j/(float)(n_height-1)) );
+      // mesh.uv_coords.push_back( glm::vec2( (i%split_size)/(float)(split_size-1), (j%split_size)/(float)(split_size-1)) );
     }
   }
 

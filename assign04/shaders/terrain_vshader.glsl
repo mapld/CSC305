@@ -9,13 +9,22 @@ uniform mat4 MVP;
 
 out vec2 uv;
 out vec3 fragPos;
+out float heightFactor;
 
 void main() {
-    /// TODO: Get height h at uv
-    float h = 0.0;
-
     uv = TexCoord;
-    fragPos = vposition.xyz + vec3(0,0,h);
-    gl_Position = MVP*vec4(vposition.x, vposition.y, vposition.z + h, 1.0);
+
+    float hf = 20.0f;
+
+    /// TODO: Get height h at uv
+    float h = (texture(noiseTex,uv).r + 1.0f) / 2.0f;
+
+    if(h < 0.35f) h = 0.35f;
+
+    h *= hf;
+
+    fragPos = vposition.xyz + vec3(0,h,0);
+    gl_Position = MVP*vec4(vposition.x, vposition.y + h, vposition.z, 1.0);
+    heightFactor = hf;
 }
 )"

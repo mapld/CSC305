@@ -4,6 +4,7 @@
 #include <SDL_image.h>
 #include <GL/gl3w.h> // opengl wrapper
 
+#include <glm/glm.hpp>
 #include <glm/common.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec3.hpp>
@@ -24,6 +25,7 @@ const int SCREEN_WIDTH=  1280;
 
 GLuint gTerrainProgramID = 0;
 GLuint gMatrixID = 0;
+GLuint gCameraUniform = 0;
 GLuint gTex = 0;
 GLint gUvCoordAttrib = -1;
 GLint gVertAttrib = -1;
@@ -45,8 +47,8 @@ SkyboxProgram gSkyboxProgram;
 struct Scene{
   TriangleStripMesh plane_mesh;
   std::vector<GLuint> textures;
+  std::vector<GLuint> textureUniforms;
   std::vector<glm::vec3> planes;
-  std::vector<GLint> plane_textures;
 
   // Model model;
 };
@@ -57,6 +59,10 @@ struct Camera{
   glm::vec3 up;
   float yaw;
   float pitch;
+  bool forwardKeyDown;
+  bool backKeyDown;
+  bool leftKeyDown;
+  bool rightKeyDown;
 };
 
 void loadCubeMesh() {
@@ -124,11 +130,19 @@ int initScene(Scene& scene){
     return -1;
   }
 
+  // Height texture
+  scene.textureUniforms.push_back(glGetUniformLocation(gTerrainProgramID, "noiseTex"));
+  scene.textures.push_back(loadAndBindNewTexture());
+  noiseTexture();
+
   const std::string list[] = {"grass", "rock", "sand", "water", "snow"};
   for (int i=0 ; i < 5 ; ++i) {
     scene.textures.push_back(loadAndBindNewTexture());
     textureFromImage(("Textures/" + list[i]+ ".png").c_str());
+    scene.textureUniforms.push_back(glGetUniformLocation(gTerrainProgramID, list[i].c_str()));
   }
+
+  gCameraUniform = glGetUniformLocation(gTerrainProgramID, "viewPos");
   // checkerBoardTexture();
 
   // scene.model = createCubeModel();
@@ -138,9 +152,9 @@ int initScene(Scene& scene){
   loadTriangleStripIntoGL(scene.plane_mesh);
 
   // add grid of planes
-  scene.plane_textures.push_back(scene.textures[1]);
-  scene.planes.push_back(glm::vec3(0.0f,0.0f,0.0f));
-  scene.plane_textures.push_back(scene.textures[2]);
+  // scene.plane_textures.push_back(scene.textures[1]);
+  // scene.planes.push_back(glm::vec3(0.0f,0.0f,0.0f));
+  // scene.plane_textures.push_back(scene.textures[2]);
   scene.planes.push_back(glm::vec3(4.97f,0.0f,0.0f));
 
   gMatrixID = glGetUniformLocation(gTerrainProgramID, "MVP");
@@ -166,12 +180,11 @@ int initScene(Scene& scene){
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-  std::cout << "test1\n";
   textureCubeMapFromImages();
-  std::cout << "test2\n";
 
   gSkyboxProgram.view_id = glGetUniformLocation(gSkyboxProgram.program_id, "V");
   gSkyboxProgram.projection_id = glGetUniformLocation(gSkyboxProgram.program_id, "P");
+
 
   loadCubeMesh();
 
@@ -183,16 +196,22 @@ int renderScene(Scene& scene, Camera camera){
 
   glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float) SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 10000.0f);
   glm::mat4 view = glm::lookAt(
-                               camera.position, // Camera is at (4,3,3), in World Space
-                               camera.position+camera.look, // looks at the origin
+                               camera.position,
+                               camera.position+camera.look, 
                                camera.up
                                );
 
+  for(int j = 0; j < scene.textures.size(); j++){
+    GLint texture = scene.textures[j];
+    glActiveTexture(GL_TEXTURE0+j);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glUniform1i(scene.textureUniforms[j], j);
+  }
+
+  glUniform3fv(gCameraUniform, 1, &camera.position[0]);
 
   for(int i = 0; i < scene.planes.size(); i++){
     glm::vec3 plane_location = scene.planes[i];
-    GLint texture = scene.plane_textures[i];
-    glBindTexture(GL_TEXTURE_2D, texture);
 
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, plane_location);
@@ -257,7 +276,7 @@ int main(int, char**){
   initImGui(sdl_handle);
 
   // Actual scene setup
-  Camera camera = {glm::vec3(15,4,4), glm::vec3(0,0,0), glm::vec3(0,1,0), 0.0f, 0.0f};
+  Camera camera = {glm::vec3(10,5.5f,4), glm::vec3(0,0,0), glm::vec3(0,1,0), 0.0f, 0.0f};
   int PI = glm::pi<float>();
   Scene scene;
   initScene(scene);
@@ -275,6 +294,34 @@ int main(int, char**){
           case SDLK_q:
             done = true;
             break;
+          case SDLK_w:
+            camera.forwardKeyDown = true;
+            break;
+          case SDLK_s:
+            camera.backKeyDown = true;
+            break;
+          case SDLK_a:
+            camera.leftKeyDown = true;
+            break;
+          case SDLK_d:
+            camera.rightKeyDown = true;
+            break;
+        }
+      }
+      if (event.type == SDL_KEYUP){
+        switch(event.key.keysym.sym){
+        case SDLK_w:
+          camera.forwardKeyDown = false;
+          break;
+        case SDLK_s:
+          camera.backKeyDown = false;
+          break;
+        case SDLK_a:
+          camera.leftKeyDown = false;
+          break;
+        case SDLK_d:
+          camera.rightKeyDown = false;
+          break;
         }
       }
       if (event.type == SDL_MOUSEMOTION ){
@@ -296,6 +343,29 @@ int main(int, char**){
         front.y = sin(camera.pitch);
 
         camera.look = glm::normalize(front);
+      }
+    }
+
+    // camera logic
+    if(camera.forwardKeyDown || camera.backKeyDown || camera.leftKeyDown || camera.rightKeyDown){
+      float movespeed = 0.3f;
+      glm::vec3 movement = glm::vec3(0,0,0);
+      if(camera.forwardKeyDown && !camera.backKeyDown){
+        movement += camera.look;
+      }
+      if(camera.backKeyDown && !camera.forwardKeyDown){
+        movement -= camera.look;
+      }
+      if(camera.leftKeyDown && !camera.rightKeyDown){
+        movement -= glm::cross(camera.look, camera.up);
+        // std::cout << "direction = " << movement.x << "," << movement.y << "," << movement.z << "\n";
+      }
+      if(camera.rightKeyDown && !camera.leftKeyDown){
+        movement += glm::cross(camera.look, camera.up);
+      }
+      if(glm::length(movement) > 0.001f){
+        movement = glm::normalize(movement);
+        camera.position += movespeed * movement;
       }
     }
 

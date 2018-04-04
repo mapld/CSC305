@@ -86,8 +86,8 @@ void main() {
     uvAdj.x += uvAdj.y / 5;
     uvAdj *= 50.0f;
     vec4 c = texture(grass,uvAdj);
-    if(h < 0.80f){
-      float thresholdAdj = slopeGrassThreshold + (0.80f-h)*2*(lowGrassThreshold-slopeGrassThreshold);
+    if(h < 0.76f){
+      float thresholdAdj = slopeGrassThreshold + (0.76f-h)*2*(lowGrassThreshold-slopeGrassThreshold);
       c = texture(rock,uvAdj);
       if(slope < thresholdAdj){
         c = texture(grass,uvAdj);
@@ -96,7 +96,7 @@ void main() {
       //   c = texture(snow,uvAdj);
       // }
     }
-    if(h > 0.80f){
+    if(h > 0.76f){
       c = texture(rock,uvAdj);
       if(slope < slopeSnowThreshold){
         c = texture(snow,uvAdj);

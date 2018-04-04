@@ -276,7 +276,7 @@ int main(int, char**){
   initImGui(sdl_handle);
 
   // Actual scene setup
-  Camera camera = {glm::vec3(10,5.5f,4), glm::vec3(0,0,0), glm::vec3(0,1,0), 0.0f, 0.0f};
+  Camera camera = {glm::vec3(10,40.5f,4), glm::vec3(0,0,0), glm::vec3(0,1,0), 0.0f, 0.0f};
   int PI = glm::pi<float>();
   Scene scene;
   initScene(scene);

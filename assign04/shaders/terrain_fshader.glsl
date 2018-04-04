@@ -36,9 +36,16 @@ void main() {
     /// TODO: Calculate surface normal N
     /// HINT: Use textureOffset(,,) to read height at uv + pixelwise offset
     /// HINT: Account for texture x,y dimensions in world space coordinates (default f_width=f_height=5)
-    vec3 A = vec3( fragPos.x + slopeOffset*(f_width / size.x), heightFactor * textureOffset(noiseTex, uv, ivec2(slopeOffset,0)).r, fragPos.z );
-    vec3 B = vec3( fragPos.x - slopeOffset*(f_width / size.x), heightFactor * textureOffset(noiseTex, uv, ivec2(-slopeOffset,0)).r, fragPos.z );
-    vec3 C = vec3( fragPos.x, heightFactor * (textureOffset(noiseTex, uv, ivec2(0,slopeOffset)).r + 1.0f) / 2.0f , fragPos.z + slopeOffset*(f_height / size.y));
+    vec3 A = vec3( fragPos.x + slopeOffset*(f_width / size.x),
+    heightFactor * (textureOffset(noiseTex, uv, ivec2(slopeOffset,0)).r + 1.0f) / 2.0f,
+    fragPos.z );
+    vec3 B = vec3( fragPos.x - slopeOffset*(f_width / size.x),
+    heightFactor * (textureOffset(noiseTex, uv, ivec2(-slopeOffset,0)).r + 1.0f) / 2.0f,
+    fragPos.z );
+    vec3 C = vec3( fragPos.x,
+    heightFactor * (textureOffset(noiseTex, uv, ivec2(0,slopeOffset)).r + 1.0f) / 2.0f ,
+    fragPos.z + slopeOffset*(f_height / size.y));
+
     vec3 D = vec3( fragPos.x, heightFactor * (textureOffset(noiseTex, uv, ivec2(0,-slopeOffset)).r + 1.0f) / 2.0f, fragPos.z - slopeOffset*(f_height / size.y));
     vec3 N = normalize( cross( normalize(C-D), normalize(A-B)) );
 
@@ -52,8 +59,8 @@ void main() {
     float slope = 0.001f;
     slope = max(slope, (A.y - fragPos.y) / (slopeOffset*f_width / size.x));
     slope = max(slope, (B.y - fragPos.y) / (slopeOffset*f_width / size.x));
-    slope = max(slope, (C.y - fragPos.y) / (slopeOffset*f_width / size.x));
-    slope = max(slope, (D.y - fragPos.y) / (slopeOffset*f_width / size.x));
+    slope = max(slope, (C.y - fragPos.y) / (slopeOffset*f_height / size.y));
+    slope = max(slope, (D.y - fragPos.y) / (slopeOffset*f_height / size.y));
 
     // base intensity
     float intensity = 0.4f;
@@ -65,40 +72,41 @@ void main() {
 
     // specular
     float specularFactor = 0.3f;
-    float phongExponent = 30.0f;
+    float phongExponent = 60.0f;
     vec3 V = viewPos - fragPos;
     vec3 halfway = normalize(L + V);
     intensity += specularFactor* max(0, pow(dot(N,halfway), phongExponent));
     /// HINT: max(,) dot(,) reflect(,) normalize();
 
-    float slopeSnowThreshold = 0.3f;
-    float slopeGrassThreshold = 0.6f;
+    float slopeSnowThreshold = 0.4f;
+    float slopeGrassThreshold = 0.8f;
     float lowGrassThreshold = 1.75f;
 
-    vec4 c = texture(grass,uv);
-    if(slope > lowGrassThreshold){
-      c = texture(rock,uv);
-    }
-    if(h > 0.50f){
-      c = texture(rock,uv);
-      if(slope < slopeGrassThreshold){
-        c = texture(grass,uv);
+    vec2 uvAdj = uv;
+    uvAdj.x += uvAdj.y / 5;
+    uvAdj *= 50.0f;
+    vec4 c = texture(grass,uvAdj);
+    if(h < 0.80f){
+      float thresholdAdj = slopeGrassThreshold + (0.80f-h)*2*(lowGrassThreshold-slopeGrassThreshold);
+      c = texture(rock,uvAdj);
+      if(slope < thresholdAdj){
+        c = texture(grass,uvAdj);
       }
       // if(slope < 0.1f){
-      //   c = texture(snow,uv);
+      //   c = texture(snow,uvAdj);
       // }
     }
-    if(h > 0.65f){
-      c = texture(rock,uv);
+    if(h > 0.80f){
+      c = texture(rock,uvAdj);
       if(slope < slopeSnowThreshold){
-        c = texture(snow,uv);
+        c = texture(snow,uvAdj);
       }
     }
     if(h < 0.351f){
-      c = texture(sand,uv);
+      c = texture(sand,uvAdj);
     }
     if(h < waterHeight){
-      c = texture(water,uv);
+      c = texture(water,uvAdj);
     }
 
     float thing = A.y - fragPos.y;

@@ -78,13 +78,13 @@ void main() {
     intensity += specularFactor* max(0, pow(dot(N,halfway), phongExponent));
     /// HINT: max(,) dot(,) reflect(,) normalize();
 
-    float slopeSnowThreshold = 0.4f;
-    float slopeGrassThreshold = 0.8f;
-    float lowGrassThreshold = 1.75f;
+    float slopeSnowThreshold = 2.5f;
+    float slopeGrassThreshold = 2.5f;
+    float lowGrassThreshold = 15.0f;
 
     vec2 uvAdj = uv;
     uvAdj.x += uvAdj.y / 5;
-    uvAdj *= 50.0f;
+    uvAdj *= 500.0f;
     vec4 c = texture(grass,uvAdj);
     if(h < 0.76f){
       float thresholdAdj = slopeGrassThreshold + (0.76f-h)*2*(lowGrassThreshold-slopeGrassThreshold);

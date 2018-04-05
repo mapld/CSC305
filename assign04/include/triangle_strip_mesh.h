@@ -15,11 +15,11 @@ struct TriangleStripMesh{
   GLuint IBO;
 };
 
-TriangleStripMesh createPlane(glm::vec2 size = glm::vec2(100.0f, 100.0f)){
+TriangleStripMesh createPlane(glm::vec2 size = glm::vec2(1000.0f, 1000.0f)){
   TriangleStripMesh mesh;
 
-  int n_width = 256; // Grid resolution
-  int n_height = 256;
+  int n_width = 1024; // Grid resolution
+  int n_height = 1024;
   float f_width = size.x; // Grid width, centered at 0,0
   float f_height = size.y;
 

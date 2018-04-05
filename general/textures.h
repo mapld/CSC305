@@ -39,12 +39,12 @@ inline float rand01() {
 float* perlin2D(const int width, const int height, const int period=64);
 
 void noiseTexture(){
-  const int width = 512;
-  const int height = 512;
+  const int width = 1024;
+  const int height = 1024;
 
   ///--- fBm parameters
-  float H = 1.1f;
-  float lacunarity = 2.1f;
+  float H = 0.8f;
+  float lacunarity = 2.0f;
   float offset = 0.16f;
   const int octaves = 5;
 

@@ -79,8 +79,8 @@ void main() {
     /// HINT: max(,) dot(,) reflect(,) normalize();
 
     float slopeSnowThreshold = 2.5f;
-    float slopeGrassThreshold = 2.5f;
-    float lowGrassThreshold = 15.0f;
+    float slopeGrassThreshold = 3.5f;
+    float lowGrassThreshold = 25.0f;
 
     vec2 uvAdj = uv;
     uvAdj.x += uvAdj.y / 5;

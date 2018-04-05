@@ -43,9 +43,9 @@ void noiseTexture(){
   const int height = 1024;
 
   ///--- fBm parameters
-  float H = 0.8f;
+  float H = 0.95f;
   float lacunarity = 2.0f;
-  float offset = 0.16f;
+  float offset = 0.15f;
   const int octaves = 5;
 
   // int perlinWidth = width*(pow(lacunarity,octaves)+1);

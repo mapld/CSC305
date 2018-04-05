@@ -1,4 +1,17 @@
 * Assignment 4
 ** Plan
-- Mess around with extending length of terrain
-- Do extra things
+
+Ez things:
+- IMGUI to control a few things (noise parameters + height adjustments, reroll , terrain texture params) (5%)
+- Bezier curve (5%)
+- height-based FPS camera (5%)
+
+Maybe doable:
+- Wave animation (10%)
+- GPU noise (5%)
+- Infinite terrain(ez if gpu noise) (15%)
+- Spherical world (need to think about noise on edges first) (10%)
+
+Hard:
+- Framebuffer reflection
+  

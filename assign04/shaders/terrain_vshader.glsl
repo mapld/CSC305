@@ -15,7 +15,7 @@ out float waterHeight;
 void main() {
     uv = TexCoord;
 
-    float hf = 60.0f;
+    float hf = 120.0f;
 
     /// TODO: Get height h at uv
     float h = (texture(noiseTex,uv).r + 1.0f) / 2.0f;
